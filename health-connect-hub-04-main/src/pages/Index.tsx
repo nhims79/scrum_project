@@ -156,7 +156,7 @@ const Index = () => {
                 <div className="rounded-lg bg-primary/10 p-2">
                   <CalendarDays className="h-6 w-6 text-primary" />
                 </div>
-                <span className="text-xl font-semibold text-foreground">HealthBook</span>
+                <span className="text-xl font-semibold text-foreground">HealthConnect</span>
               </div>
               <p className="mt-4 text-sm text-muted-foreground max-w-xs">
                 Your trusted partner in healthcare appointment management.
@@ -192,7 +192,7 @@ const Index = () => {
                   <Phone className="h-4 w-4" /> +1 (555) 123-4567
                 </li>
                 <li className="flex items-center gap-2 text-muted-foreground">
-                  <Mail className="h-4 w-4" /> info@healthbook.com
+                  <Mail className="h-4 w-4" /> info@healthconnect.com
                 </li>
                 <li className="flex items-center gap-2 text-muted-foreground">
                   <MapPin className="h-4 w-4" /> 123 Medical Plaza, City
@@ -205,7 +205,7 @@ const Index = () => {
           <div className="my-8 h-px w-full bg-border" />
 
           <p className="text-center text-sm text-muted-foreground">
-            © {new Date().getFullYear()} HealthBook. All rights reserved.
+            © {new Date().getFullYear()} HealthConnect. All rights reserved.
           </p>
         </div>
       </footer>
