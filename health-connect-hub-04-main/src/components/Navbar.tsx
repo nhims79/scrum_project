@@ -10,7 +10,7 @@ type StoredUser = {
   avatarUrl?: string;
 };
 
-const STORAGE_KEY = "user";          // khớp với Auth.tsx của bạn
+const STORAGE_KEY = "user";          // Key lưu user trong localStorage
 const AUTH_EVENT = "auth-changed";   // custom event để đồng bộ navbar
 
 function readUser(): StoredUser | null {
@@ -64,7 +64,7 @@ const Navbar = () => {
 
           {/* Right (desktop) */}
           <div className="hidden md:flex items-center gap-6">
-            {/* ĐÃ BỎ Symptom Checker & Departments */}
+            {/* Đã Bỏ Symptom Checker & Departments */}
 
             {!user ? (
               <Button asChild>
@@ -106,6 +106,15 @@ const Navbar = () => {
                   </div>
                 )}
               </div>
+            )}
+
+            {/* Hiển thị nút Book Appointment khi đã đăng nhập */}
+            {user && (
+              <Button asChild>
+                <Link to="/symptoms" className="ml-6 text-sm text-foreground">
+                  Book Appointment
+                </Link>
+              </Button>
             )}
           </div>
 
