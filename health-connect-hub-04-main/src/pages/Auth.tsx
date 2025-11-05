@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -12,6 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Heart } from "lucide-react";
 import { Link } from "react-router-dom";
+import { loginApi, registerApi } from "@/lib/api";
+
 
 const loginSchema = z.object({
   email: z.string().trim().email({ message: "Invalid email address" }).max(255),
@@ -58,32 +59,52 @@ const Auth = () => {
     },
   });
 
+  // const onLogin = async (values: LoginFormValues) => {
+  //   setIsLoading(true);
+  //   try {
+  //     const { error } = await supabase.auth.signInWithPassword({
+  //       email: values.email,
+  //       password: values.password,
+  //     });
+
+  //     if (error) {
+  //       toast({
+  //         title: "Login failed",
+  //         description: error.message,
+  //         variant: "destructive",
+  //       });
+  //       return;
+  //     }
+
+  //     toast({
+  //       title: "Success!",
+  //       description: "You have been logged in successfully.",
+  //     });
+  //     navigate("/");
+  //   } catch (error) {
+  //     toast({
+  //       title: "Error",
+  //       description: "An unexpected error occurred. Please try again.",
+  //       variant: "destructive",
+  //     });
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
   const onLogin = async (values: LoginFormValues) => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
-      });
-
-      if (error) {
-        toast({
-          title: "Login failed",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
-      }
-
+      const user = await loginApi(values.email, values.password);
       toast({
         title: "Success!",
         description: "You have been logged in successfully.",
       });
+      localStorage.setItem("user", JSON.stringify(user));
       navigate("/");
-    } catch (error) {
+    } catch (error: any) {
       toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        title: "Login failed",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
@@ -91,47 +112,77 @@ const Auth = () => {
     }
   };
 
+
+  // const onSignup = async (values: SignupFormValues) => {
+  //   setIsLoading(true);
+  //   try {
+  //     const { error } = await supabase.auth.signUp({
+  //       email: values.email,
+  //       password: values.password,
+  //       options: {
+  //         emailRedirectTo: `${window.location.origin}/`,
+  //         data: {
+  //           full_name: values.fullName,
+  //           cccd: values.cccd,
+  //           phone: values.phone,
+  //           role: "patient",
+  //         },
+  //       },
+  //     });
+
+  //     if (error) {
+  //       toast({
+  //         title: "Signup failed",
+  //         description: error.message,
+  //         variant: "destructive",
+  //       });
+  //       return;
+  //     }
+
+  //     toast({
+  //       title: "Success!",
+  //       description: "Your account has been created successfully.",
+  //     });
+  //     navigate("/");
+  //   } catch (error) {
+  //     toast({
+  //       title: "Error",
+  //       description: "An unexpected error occurred. Please try again.",
+  //       variant: "destructive",
+  //     });
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
   const onSignup = async (values: SignupFormValues) => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
+      await registerApi({
         email: values.email,
         password: values.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            full_name: values.fullName,
-            cccd: values.cccd,
-            phone: values.phone,
-            role: "patient",
-          },
-        },
+        fullName: values.fullName,
+        cccd: values.cccd,
+        phone: values.phone,
+        role: "patient",
       });
-
-      if (error) {
-        toast({
-          title: "Signup failed",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
-      }
 
       toast({
         title: "Success!",
         description: "Your account has been created successfully.",
       });
       navigate("/");
-    } catch (error) {
+    } catch (error: any) {
       toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        title: "Signup failed",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4">
