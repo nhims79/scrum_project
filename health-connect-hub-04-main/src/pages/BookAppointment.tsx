@@ -138,42 +138,6 @@ const BookAppointment = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-card shadow-medium">
-                <CardHeader>
-                  <CardTitle>Patient Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name *</Label>
-                    <Input
-                      id="name"
-                      placeholder="Enter your full name"
-                      value={patientName}
-                      onChange={(e) => setPatientName(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number *</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="Enter your phone number"
-                      value={patientPhone}
-                      onChange={(e) => setPatientPhone(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="reason">Reason for Visit (Optional)</Label>
-                    <Textarea
-                      id="reason"
-                      placeholder="Briefly describe your symptoms or reason for visit"
-                      value={reason}
-                      onChange={(e) => setReason(e.target.value)}
-                      className="min-h-24"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
 
               <Button 
                 onClick={handleBooking} 

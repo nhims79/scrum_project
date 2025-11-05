@@ -57,31 +57,6 @@ const Confirmation = () => {
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 pb-3 border-b border-border">
-                <User className="h-5 w-5 text-primary mt-0.5" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Patient Name</p>
-                  <p className="font-medium">{patientName || "Not specified"}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 pb-3 border-b border-border">
-                <Phone className="h-5 w-5 text-primary mt-0.5" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Contact Number</p>
-                  <p className="font-medium">{patientPhone || "Not specified"}</p>
-                </div>
-              </div>
-
-              {reason && (
-                <div className="flex items-start gap-3">
-                  <FileText className="h-5 w-5 text-primary mt-0.5" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Reason for Visit</p>
-                    <p className="font-medium">{reason}</p>
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
 
