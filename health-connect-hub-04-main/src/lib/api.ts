@@ -94,6 +94,22 @@ export async function createAppointment(req: {
     if (!res.ok || !data.ok) throw new Error(data.message || "Create appointment failed");
     return data.data as number; // appointment_id
 }
+export async function getOpenSlotsForDay(doctorId: number, isoDate: string) {
+    const res = await fetch(
+        `${API_BASE}/api/doctors/${doctorId}/open-slots?from=${isoDate}&to=${isoDate}`
+    );
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.message || "Load open slots failed");
+    // data.data: [{ scheduleId, workDate, slotId, slotName, startTime, endTime }]
+    return data.data as Array<{
+        scheduleId: number;
+        workDate: string;  // "2025-11-06"
+        slotId: number;
+        slotName: string;
+        startTime: string; // "08:00:00"
+        endTime: string;   // "09:00:00"
+    }>;
+}
 
 export async function getOpenSlotsByDateGrouped(
     doctorId: number,
@@ -114,4 +130,35 @@ export async function getOpenSlotsByDateGrouped(
             endTime: string;   // "09:00:00"
         }>;
     }>;
+}
+
+export async function getBookedSlotsByDateGrouped(doctorId: number, fromISO: string, toISO: string) {
+    const res = await fetch(`${API_BASE}/api/doctors/${doctorId}/open-slots-by-date?from=${fromISO}&to=${toISO}`);
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.message || "Load booked slots failed");
+    return data.data as Array<{
+        workDate: string; // "2025-11-06"
+        slots: Array<{
+            scheduleId: number;
+            slotId: number;
+            slotName: string;
+            startTime: string; // "08:00:00"
+            endTime: string;   // "09:00:00"
+        }>;
+    }>;
+}
+
+
+export async function getDoctorProfile(doctorId: number) {
+    const res = await fetch(`${API_BASE}/api/departments/${doctorId}`);
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.message || "Load doctor failed");
+    return data.data as {
+        doctorId: number;
+        fullName: string;
+        degree?: string | null;
+        experienceYears?: number | null;
+        departmentName?: string | null;
+        location?: string | null;
+    };
 }
