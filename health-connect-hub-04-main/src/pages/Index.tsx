@@ -6,10 +6,12 @@ import { Calendar, Clock, Users, Shield, ArrowRight, CheckCircle2 } from "lucide
 import heroImage from "@/assets/hinhanh.png";
 import { CalendarDays, Phone, Mail, MapPin } from "lucide-react"; // ✅ Đã thêm các icon bị thiếu
 import Navbar from "@/components/Navbar";  // Đảm bảo đường dẫn đúng với cấu trúc của bạn
+import { useNavigate } from "react-router-dom";
 
 
 const Index = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const navigate = useNavigate();
 
   // Kiểm tra nếu người dùng đã đăng nhập
   useEffect(() => {
@@ -59,7 +61,9 @@ const Index = () => {
                   <Link to="/symptoms">
                     <Button
                       size="lg"
-                      className="w-full bg-[#14b8a6] hover:bg-[#006ae6] text-white sm:w-auto"
+                variant="outline"
+                onClick={() => navigate("/symptoms")}
+                className="text-lg px-8"
                     >
                       Book Appointment
                       <ArrowRight className="ml-2 h-4 w-4" />

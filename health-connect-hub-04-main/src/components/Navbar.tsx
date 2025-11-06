@@ -108,11 +108,11 @@ const Navbar = () => {
               </div>
             )}
 
-            {/* Hiển thị nút Book Appointment khi đã đăng nhập */}
+            {/* Hiển thị nút View booking history khi đã đăng nhập */}
             {user && (
               <Button asChild>
-                <Link to="/symptoms" className="ml-6 text-sm text-foreground">
-                  Book Appointment
+                <Link to="/history" className="ml-6 text-sm text-foreground">
+                  View booking history
                 </Link>
               </Button>
             )}

@@ -51,37 +51,45 @@ const BookAppointment = () => {
   // map label "hh:mm AM/PM" -> scheduleId
   const [labelToSchedule, setLabelToSchedule] = useState<Map<string, number>>(new Map());
 
+  const getErrorMessage = (e: unknown) =>
+  e instanceof Error ? e.message : String(e);
+
   // Gọi API mỗi khi đổi ngày / doctorId
   useEffect(() => {
-    (async () => {
-      if (!doctorId || !date) return;
-      try {
-        setLoadingSlots(true);
-        const iso = toISODate(date);
-        const grouped = await getOpenSlotsByDateGrouped(Number(doctorId), iso, iso);
+  (async () => {
+    if (!doctorId || !date) return;
+    try {
+      setLoadingSlots(true);
+      const iso = toISODate(date);
+      const grouped = await getOpenSlotsByDateGrouped(Number(doctorId), iso, iso);
 
-        // Tìm block đúng ngày
-        const day = grouped.find(g => g.workDate === iso);
-        const m = new Map<string, number>();
-        day?.slots.forEach(s => {
-          const label = toAmPmLabel(s.startTime);
-          m.set(label, s.scheduleId);
-        });
-        setLabelToSchedule(m);
+      // Tìm block đúng ngày
+      const day = grouped.find((g: { workDate: string }) => g.workDate === iso);
 
-        // Nếu đang chọn slot nhưng không còn open → bỏ chọn
-        if (selectedTime && !m.has(selectedTime)) {
-          setSelectedTime("");
-        }
-      } catch (e: any) {
-        setLabelToSchedule(new Map());
-        toast({ title: "Cannot load slots", description: e.message, variant: "destructive" });
-      } finally {
-        setLoadingSlots(false);
+      const m = new Map<string, number>();
+      day?.slots.forEach((s: { startTime: string; scheduleId: number }) => {
+        const label = toAmPmLabel(s.startTime);
+        m.set(label, s.scheduleId);
+      });
+      setLabelToSchedule(m);
+
+      // Nếu đang chọn slot nhưng không còn open → bỏ chọn
+      if (selectedTime && !m.has(selectedTime)) {
+        setSelectedTime("");
       }
-    })();
-  }, [doctorId, date]);
-
+    } catch (e: unknown) {
+      setLabelToSchedule(new Map());
+      toast({
+        title: "Cannot load slots",
+        description: getErrorMessage(e),
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingSlots(false);
+    }
+  })();
+  // thêm selectedTime vào deps vì bạn dùng nó trong effect
+}, [doctorId, date, selectedTime]);
   const openSet = useMemo(() => new Set(labelToSchedule.keys()), [labelToSchedule]);
 
   const handleBooking = () => {
