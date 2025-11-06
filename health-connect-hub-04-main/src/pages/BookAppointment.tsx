@@ -11,9 +11,31 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar as CalendarIcon, Clock, MapPin, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getOpenSlotsByDateGrouped } from "@/lib/api";
+import { getBookedSlotsByDateGrouped } from "@/lib/api";
+import { getDoctorProfile } from "@/lib/api";
 
-// Danh sách khung giờ hiển thị (12h-format)
+
+// === API HELPER: chỉ dùng API trả về các slot ĐÃ ĐẶT (grouped) ===
+import { API_BASE } from "@/lib/api"; // nếu chưa có, bạn có thể đặt const BASE dưới
+
+// async function getBookedSlotsByDateGrouped(doctorId: number, fromISO: string, toISO: string) {
+//   // Bạn đã có sẵn getOpenSlotsByDateGrouped trả booked; tái sử dụng đường dẫn này
+//   const res = await fetch(`${API_BASE}/api/doctors/${doctorId}/open-slots-by-date?from=${fromISO}&to=${toISO}`);
+//   const data = await res.json();
+//   if (!res.ok || !data.ok) throw new Error(data.message || "Load booked slots failed");
+//   return data.data as Array<{
+//     workDate: string;
+//     slots: Array<{
+//       scheduleId: number;
+//       slotId: number;
+//       slotName: string;
+//       startTime: string; // "08:00:00"
+//       endTime: string;   // "09:00:00"
+//     }>;
+//   }>;
+// }
+
+// ====== UI khung giờ cố định (12h-format) ======
 const timeSlots = [
   "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM",
   "11:00 AM", "11:30 AM", "02:00 PM", "02:30 PM",
@@ -27,6 +49,7 @@ function toISODate(d: Date) {
   return `${y}-${m}-${dd}`;
 }
 
+// "HH:mm:ss" -> "hh:mm AM/PM"
 function toAmPmLabel(hhmmss: string) {
   const [H, M] = hhmmss.split(":").map(Number);
   const h12 = ((H + 11) % 12) + 1;
@@ -47,50 +70,39 @@ const BookAppointment = () => {
   const [patientPhone, setPatientPhone] = useState("");
   const [reason, setReason] = useState("");
 
+  // Danh sách slot đã đặt (đen) theo ngày
+  const [bookedSet, setBookedSet] = useState<Set<string>>(new Set());
   const [loadingSlots, setLoadingSlots] = useState(false);
-  // map label "hh:mm AM/PM" -> scheduleId
-  const [labelToSchedule, setLabelToSchedule] = useState<Map<string, number>>(new Map());
 
-  const getErrorMessage = (e: unknown) =>
-  e instanceof Error ? e.message : String(e);
-
-  // Gọi API mỗi khi đổi ngày / doctorId
+  // Load danh sách slot ĐÃ ĐẶT cho ngày đang chọn
   useEffect(() => {
-  (async () => {
-    if (!doctorId || !date) return;
-    try {
-      setLoadingSlots(true);
-      const iso = toISODate(date);
-      const grouped = await getOpenSlotsByDateGrouped(Number(doctorId), iso, iso);
-
-      // Tìm block đúng ngày
-      const day = grouped.find((g: { workDate: string }) => g.workDate === iso);
-
-      const m = new Map<string, number>();
-      day?.slots.forEach((s: { startTime: string; scheduleId: number }) => {
-        const label = toAmPmLabel(s.startTime);
-        m.set(label, s.scheduleId);
-      });
-      setLabelToSchedule(m);
-
-      // Nếu đang chọn slot nhưng không còn open → bỏ chọn
-      if (selectedTime && !m.has(selectedTime)) {
+    (async () => {
+      if (!doctorId || !date) return;
+      try {
+        setLoadingSlots(true);
+        const iso = toISODate(date);
+        const grouped = await getBookedSlotsByDateGrouped(Number(doctorId), iso, iso);
+        const day = grouped.find(g => g.workDate === iso);
+        const s = new Set<string>();
+        day?.slots.forEach(slot => s.add(toAmPmLabel(slot.startTime)));
+        setBookedSet(s);
+        if (selectedTime && s.has(selectedTime)) {
+          // Nếu slot đang chọn đã bị book, bỏ chọn
+          setSelectedTime("");
+        }
+      } catch (e: any) {
+        setBookedSet(new Set());
         setSelectedTime("");
+        toast({ title: "Cannot load slots", description: e.message, variant: "destructive" });
+      } finally {
+        setLoadingSlots(false);
       }
-    } catch (e: unknown) {
-      setLabelToSchedule(new Map());
-      toast({
-        title: "Cannot load slots",
-        description: getErrorMessage(e),
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingSlots(false);
-    }
-  })();
-  // thêm selectedTime vào deps vì bạn dùng nó trong effect
-}, [doctorId, date, selectedTime]);
-  const openSet = useMemo(() => new Set(labelToSchedule.keys()), [labelToSchedule]);
+    })();
+  }, [doctorId, date]);
+
+
+  // Tiện hàm
+  const isBooked = (label: string) => bookedSet.has(label);
 
   const handleBooking = () => {
     if (!date || !selectedTime || !patientName || !patientPhone) {
@@ -101,13 +113,23 @@ const BookAppointment = () => {
       });
       return;
     }
-    // Ở bước này bạn có thể dùng labelToSchedule.get(selectedTime) để lấy scheduleId và gọi POST /api/appointments
+
+    // CHÚ Ý: Vì bạn chưa có API open/scheduleId, ở đây mình chỉ điều hướng/hiển thị.
+    // Khi backend hỗ trợ nhận (doctorId, workDate, startTime) -> tự tìm scheduleId thì gọi POST ở đây.
     toast({
       title: "Appointment Ready",
       description: `Selected ${toISODate(date)} - ${selectedTime}`,
     });
+
     navigate("/confirmation", {
-      state: { date, time: selectedTime, doctorName: `Doctor #${doctorId}`, patientName, patientPhone, reason }
+      state: {
+        date,
+        time: selectedTime,
+        doctorName: `Doctor #${doctorId}`, // bạn có thể thay bằng API profile nếu muốn
+        patientName,
+        patientPhone,
+        reason
+      }
     });
   };
 
@@ -118,7 +140,9 @@ const BookAppointment = () => {
         <div className="max-w-5xl mx-auto space-y-8">
           <div className="text-center space-y-4">
             <h1 className="text-4xl font-bold text-foreground">Book Your Appointment</h1>
-            <p className="text-lg text-muted-foreground">Select your preferred date and time</p>
+            <p className="text-lg text-muted-foreground">
+              Select your preferred date and time
+            </p>
           </div>
 
           <div className="grid lg:grid-cols-3 gap-8">
@@ -131,7 +155,7 @@ const BookAppointment = () => {
                       <AvatarFallback className="bg-primary/10 text-primary text-lg">DR</AvatarFallback>
                     </Avatar>
                     <div>
-                      <CardTitle>Doctor #{doctorId}</CardTitle>
+                      <CardTitle>{`Doctor #${doctorId}`}</CardTitle>
                       <CardDescription className="text-base">Department</CardDescription>
                     </div>
                   </div>
@@ -174,27 +198,39 @@ const BookAppointment = () => {
                     <Clock className="h-5 w-5 text-primary" />
                     <CardTitle>Select Time Slot</CardTitle>
                   </div>
-                  {loadingSlots && (
-                    <CardDescription>Loading available slots…</CardDescription>
-                  )}
+                  {loadingSlots && <CardDescription>Loading booked slots…</CardDescription>}
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-                    {timeSlots.map((time) => {
-                      const isOpen = openSet.has(time);
-                      const isSelected = selectedTime === time;
+                    {timeSlots.map((label) => {
+                      const booked = isBooked(label);
+                      const selected = selectedTime === label;
+
+                      // slot đã được đăng ký -> bôi đen & disable
+                      if (booked) {
+                        return (
+                          <Button
+                            key={label}
+                            variant="secondary"
+                            disabled
+                            className="w-full bg-black text-white dark:bg-black opacity-80"
+                            title="Booked"
+                          >
+                            {label}
+                          </Button>
+                        );
+                      }
+
+                      // slot chưa đăng ký -> sáng & bấm chọn
                       return (
                         <Button
-                          key={time}
-                          variant={isSelected ? "default" : (isOpen ? "outline" : "secondary")}
-                          onClick={() => isOpen && setSelectedTime(time)}
-                          className={
-                            "w-full " + (isOpen ? "" : "opacity-70 pointer-events-none bg-black text-white dark:bg-black")
-                          }
-                          disabled={!isOpen}
-                          title={isOpen ? "Available" : "Fully booked"}
+                          key={label}
+                          variant={selected ? "default" : "outline"}
+                          onClick={() => setSelectedTime(label)}
+                          className="w-full"
+                          title="Available"
                         >
-                          {time}
+                          {label}
                         </Button>
                       );
                     })}
