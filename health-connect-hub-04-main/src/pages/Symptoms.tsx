@@ -1,49 +1,63 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { fetchSymptoms, matchDepartmentsBySymptoms } from "@/lib/api";
 
-const commonSymptoms = [
-  "Fever", "Headache", "Cough", "Chest Pain", "Abdominal Pain",
-  "Nausea", "Dizziness", "Fatigue", "Joint Pain", "Shortness of Breath"
-];
+type Symptom = { id: number; name: string };
 
 const Symptoms = () => {
-  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
+  const [allSymptoms, setAllSymptoms] = useState<Symptom[]>([]);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const toggleSymptom = (symptom: string) => {
-    setSelectedSymptoms(prev =>
-      prev.includes(symptom)
-        ? prev.filter(s => s !== symptom)
-        : [...prev, symptom]
-    );
+  // load symptoms từ backend khi mở trang
+  useEffect(() => {
+    (async () => {
+      try {
+        const list = await fetchSymptoms();
+        setAllSymptoms(list);
+      } catch (e: any) {
+        toast({ title: "Cannot load symptoms", description: e.message, variant: "destructive" });
+      }
+    })();
+  }, []);
+
+  const toggleSymptom = (id: number) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  const handleAnalyze = () => {
-    if (selectedSymptoms.length === 0) {
-      toast({
-        title: "No symptoms selected",
-        description: "Please select or describe your symptoms",
-        variant: "destructive",
-      });
+  const selectedNames = useMemo(
+    () => allSymptoms.filter(s => selectedIds.includes(s.id)).map(s => s.name),
+    [allSymptoms, selectedIds]
+  );
+
+  const handleAnalyze = async () => {
+    if (selectedIds.length === 0) {
+      toast({ title: "No symptoms selected", description: "Please select or describe your symptoms", variant: "destructive" });
       return;
     }
-    
-    toast({
-      title: "Analyzing symptoms...",
-      description: "Finding the best department for you",
-    });
-    
-    setTimeout(() => {
-      navigate("/departments", { state: { symptoms: selectedSymptoms } });
-    }, 1000);
+    setLoading(true);
+    try {
+      const matches = await matchDepartmentsBySymptoms(selectedIds);
+      // chuyển sang trang departments, mang theo: triệu chứng đã chọn + danh sách khoa gợi ý
+      navigate("/departments", {
+        state: {
+          symptoms: selectedNames,
+          departments: matches, // [{deptId, deptName, matchedDiseases}, ...]
+        },
+      });
+    } catch (e: any) {
+      toast({ title: "Analyze failed", description: e.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -65,16 +79,19 @@ const Symptoms = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex flex-wrap gap-2">
-                {commonSymptoms.map((symptom) => (
+                {allSymptoms.map((s) => (
                   <Badge
-                    key={symptom}
-                    variant={selectedSymptoms.includes(symptom) ? "default" : "outline"}
+                    key={s.id}
+                    variant={selectedIds.includes(s.id) ? "default" : "outline"}
                     className="cursor-pointer px-4 py-2 text-sm hover:shadow-soft transition-all"
-                    onClick={() => toggleSymptom(symptom)}
+                    onClick={() => toggleSymptom(s.id)}
                   >
-                    {symptom}
+                    {s.name}
                   </Badge>
                 ))}
+                {allSymptoms.length === 0 && (
+                  <span className="text-sm text-muted-foreground">Loading symptoms…</span>
+                )}
               </div>
 
               <div className="flex items-start gap-3 p-4 rounded-lg bg-accent/50 border border-accent">
@@ -84,13 +101,8 @@ const Symptoms = () => {
                 </p>
               </div>
 
-              <Button 
-                onClick={handleAnalyze} 
-                className="w-full" 
-                size="lg"
-                disabled={selectedSymptoms.length === 0 }
-              >
-                Analyze Symptoms
+              <Button onClick={handleAnalyze} className="w-full" size="lg" disabled={loading || selectedIds.length === 0}>
+                {loading ? "Analyzing…" : "Analyze Symptoms"}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </CardContent>
